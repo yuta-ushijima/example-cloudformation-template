@@ -19,7 +19,7 @@ Resources:
   AwsCfNewProjectEC2:
     Type: AWS::EC2::Instance
     Properties:
-      SubnetId: !Ref AwsCfNewProjectSubnet
+      SubnetId: !Ref AwsCfNewProjectPublicSubnet
       InstanceType: t2.micro
       AvailabilityZone: ap-northeast-1a
       KeyName: yuta-ushijima
@@ -35,7 +35,7 @@ Resources:
           Value: aws-cf-new-project-ec2
 
   # サブネットの定義
-  AwsCfNewProjectSubnet:
+  AwsCfNewProjectPublicSubnet:
     Type: AWS::EC2::Subnet
     Properties:
       CidrBlock: 10.0.0.0/24
@@ -45,7 +45,29 @@ Resources:
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: aws-cf-new-project-subnet
+          Value: aws-cf-new-project-public-subnet
+
+  # プライベートサブネットの定義
+  AwsCfNewProjectPrivateSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.3.0/24
+      AvailabilityZone: ap-northeast-1a
+      VpcId: !Ref AwsCfNewProjectVPC
+      Tags:
+        - Key: Name
+          Value: aws-cf-new-project-private-subnet
+
+  # RDS用サブネットの定義
+  AwsCfNewProjectRDSSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.4.54/24
+      AvailabilityZone: ap-northeast-1c
+      VpcId: !Ref AwsCfNewProjectVPC
+      Tags:
+        - Key: Name
+          Value: aws-cf-new-project-rds-subnet
 
   # インターネットゲートウェイの定義
   AwsCfNewProjectIgw:
@@ -75,7 +97,7 @@ Resources:
   AwsCfNewProjectRouteLocal:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref AwsCfNewProjectSubnet
+      SubnetId: !Ref AwsCfNewProjectPublicSubnet
       RouteTableId: !Ref AwsCfNewProjectRouteTable
 
   # インターネットゲートウェイとルートテーブルの関連付け
@@ -116,3 +138,22 @@ Resources:
       Tags:
         - Key: Name
           Value: aws-cf-new-project-sg
+
+  # RDS用セキュリティグループの定義
+  AwsCfNewProjectRDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref AwsCfNewProjectVPC
+      GroupDescription: This Security Group is for RDS of AwsnewProject
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          SourceSecurityGroupId: !Ref AwsNewProjectSecurityGroup
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: aws-cf-new-project-sg-for-rds
+
