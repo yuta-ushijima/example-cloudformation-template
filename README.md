@@ -2,6 +2,7 @@
 
 ## Summary
 This is example template of AWS CloudFormation.
+test commit
 
 ## Refs
 - [(下準備編)世界一丁寧なAWS解説。EC2を利用して、RailsアプリをAWSにあげるまで](https://qiita.com/naoki_mochizuki/items/f795fe3e661a3349a7ce)
