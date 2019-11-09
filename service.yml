@@ -32,7 +32,7 @@ Resources:
         - !Ref AwsNewProjectSecurityGroup
       Tags:
         - Key: Name
-          Value: aws-cf-new-project-ec2
+          Value: awsCfNewProjectEc2
 
   # サブネットの定義
   AwsCfNewProjectPublicSubnet:
