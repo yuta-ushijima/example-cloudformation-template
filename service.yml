@@ -15,14 +15,14 @@ Resources:
         - Key: Name
           Value: aws-cf-new-project-vpc
 
-  #ElasticIp定義
-  AwsCfNewProjectElasticIp:
-   Type: AWS::EC2::EIP
-   Properties:
-     Domain: "3.115.204.106"
-     InstanceId: !Ref AwsCfNewProjectEC2
-   DependsOn: AwsCfNewProjectEC2
-  
+  # ElasticIp定義  
+  AwsCfNewProjectElasticIpAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      EIP: "3.115.204.106"
+      InstanceId: !Ref AwsCfNewProjectEC2
+    DependsOn: AwsCfNewProjectEC2
+
   # EC2インスタンスの定義
   AwsCfNewProjectEC2:
     Type: AWS::EC2::Instance
