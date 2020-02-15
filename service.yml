@@ -166,38 +166,38 @@ Resources:
           Value: aws-cf-new-project-sg-for-rds
 
 
-  # RDSの定義
-  AwsCfNewProjectRDS:
-    Type: AWS::RDS::DBInstance
-    Properties:
-      Engine: mysql
-      EngineVersion: 5.7.23
-      LicenseModel: general-public-license
-      DBInstanceClass: db.t2.micro
-      MultiAZ: false
-      # gp2がいわゆる汎用SSD
-      StorageType: gp2
-      DBInstanceIdentifier: aws-cf-new-project-mysql
-      MasterUsername: admin
-      MasterUserPassword: adminpass
-      Port: 3306
-      VPCSecurityGroups:
-        - !Ref AwsCfNewProjectRDSSecurityGroup
-      AllocatedStorage: 20
-      AllowMajorVersionUpgrade: false
-      AutoMinorVersionUpgrade: true
-      PubliclyAccessible: false
-      DBParameterGroupName: default.mysql5.7
-      OptionGroupName: default:mysql-5-7
-      CopyTagsToSnapshot: false
-      BackupRetentionPeriod: 1
-      # モニタリングインターバルを0にする事で無効にする
-      MonitoringInterval: 0
-      DBName: AwsCfNewProjectMasterDB
-      DBSubnetGroupName: !Ref AwsCfNewProjectSubnetGroup
-      Tags:
-        - Key: Name
-          Value: aws-cf-new-project-rds
+#   # RDSの定義
+#   AwsCfNewProjectRDS:
+#     Type: AWS::RDS::DBInstance
+#     Properties:
+#       Engine: mysql
+#       EngineVersion: 5.7.23
+#       LicenseModel: general-public-license
+#       DBInstanceClass: db.t2.micro
+#       MultiAZ: false
+#       # gp2がいわゆる汎用SSD
+#       StorageType: gp2
+#       DBInstanceIdentifier: aws-cf-new-project-mysql
+#       MasterUsername: admin
+#       MasterUserPassword: adminpass
+#       Port: 3306
+#       VPCSecurityGroups:
+#         - !Ref AwsCfNewProjectRDSSecurityGroup
+#       AllocatedStorage: 20
+#       AllowMajorVersionUpgrade: false
+#       AutoMinorVersionUpgrade: true
+#       PubliclyAccessible: false
+#       DBParameterGroupName: default.mysql5.7
+#       OptionGroupName: default:mysql-5-7
+#       CopyTagsToSnapshot: false
+#       BackupRetentionPeriod: 1
+#       # モニタリングインターバルを0にする事で無効にする
+#       MonitoringInterval: 0
+#       DBName: AwsCfNewProjectMasterDB
+#       DBSubnetGroupName: !Ref AwsCfNewProjectSubnetGroup
+#       Tags:
+#         - Key: Name
+#           Value: aws-cf-new-project-rds
 
 
   # RDSのサブネットグループを定義
