@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: "世界一丁寧なAWS解説をCfnでコード化"
+Description: "世界一丁寧なAWS解説をCloudformationでコード化"
 
 # AWSの各リソースの定義
 Resources:
