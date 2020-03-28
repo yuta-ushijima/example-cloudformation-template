@@ -19,7 +19,7 @@ Resources:
   AwsCfNewProjectElasticIpAssociation:
     Type: AWS::EC2::EIPAssociation
     Properties:
-      EIP: "3.115.204.106"
+      EIP: "52.198.77.179"
       InstanceId: !Ref AwsCfNewProjectEC2
     DependsOn: AwsCfNewProjectEC2
 
