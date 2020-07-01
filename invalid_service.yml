@@ -1,0 +1,15 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: "失敗するCloudformationテンプレート1"
+
+# AWSの各リソースの定義
+Resources:
+  # VPCの定義
+  InvalidVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: invalid-vpc
