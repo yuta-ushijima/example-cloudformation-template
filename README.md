@@ -1,5 +1,6 @@
 # example-cloudformation-template
 
+
 ## Summary
 - This is example template of AWS CloudFormation!
 ## Refs
