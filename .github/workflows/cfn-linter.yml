@@ -28,4 +28,4 @@ jobs:
           pip install cfn-lint
       - name: Lint with cfn-lint
         run: |
-          cfn-lint service.yml
+          cfn-lint success_service.yml
