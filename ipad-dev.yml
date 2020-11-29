@@ -5,9 +5,7 @@ Description: "iPad用の開発環境"
 # Parameters
 Parameters:
   NameKeyPrefix:
-	  Type: String
-  Ec2ImageId:
-	  Type: String
+    Type: String
 
 # AWSの各リソースの定義
 Resources:
@@ -20,7 +18,7 @@ Resources:
       EnableDnsSupport: true
       Tags: 
         - Key: Name
-		Value: !Sub "${NameKeyPrefix}-vpc"
+          Value: !Sub "${NameKeyPrefix}-vpc"
 
   # サブネットの定義
   PublicSubnet1a:
@@ -35,8 +33,6 @@ Resources:
         - Key: Name
           Value: !Sub "${NameKeyPrefix}-public-subnet-1a"
 
-
-		 
   # インターネットゲートウェイの定義
   Igw:
     Type: AWS::EC2::InternetGateway
@@ -44,8 +40,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${NameKeyPrefix}-igw"
-		  
-
+  
   # VPCGatewayAttachment定義
   VpcGatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
@@ -98,6 +93,11 @@ Resources:
           FromPort: 3000
           ToPort: 3000
           CidrIp: 0.0.0.0/0
+        # docker用
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 0.0.0.0/0
       SecurityGroupEgress:
         - IpProtocol: -1
           CidrIp: 0.0.0.0/0
@@ -124,10 +124,10 @@ Resources:
       Monitoring: false
       # ここのAMIはマネジメントコンソールから確認可能
       # 中身はAmazon Linux2
-      ImageId: !Sub "${Ec2ImageId}"
+      ImageId: ami-00f045aed21a55240
       InstanceInitiatedShutdownBehavior: stop
       SecurityGroupIds:
         - !Ref SecurityGroup
       Tags:
         - Key: Name
-		  Value: !Sub "${NameKeyPrefix}-Ec21a"
+          Value: !Sub "${NameKeyPrefix}-Ec21a"
