@@ -1,0 +1,226 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: "rails用のCloudFormationTemplate"
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: RailsTemplateVpc
+
+  public1a:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: ap-northeast-1a
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.0.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: RailsTemplatePublicSubnet1a
+
+  public1d:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: ap-northeast-1d
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.1.0/24
+      Tags:
+        - Key: Name
+          Value: RailsTemplatePublicSubnet1d
+
+  private1a:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: ap-northeast-1a
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.2.0/24
+      Tags:
+        - Key: Name
+          Value: RailsTemplatePrivateSubnet1a
+  
+  private1d:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: ap-northeast-1d
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.3.0/24
+      Tags:
+        - Key: Name
+          Value: RailsTemplatePrivateSubnet1d
+
+  igw:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: RailsTemplateIgw
+  
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref igw
+  
+  routeTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: RailsTemplateRouteTable
+
+  RouteLocal1a:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref public1a
+      RouteTableId: !Ref routeTable
+
+  RouteLocal1d:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref public1d
+      RouteTableId: !Ref routeTable
+
+  route:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref routeTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref igw
+  
+  PublicSg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: RailsTemplatePublicSg
+      GroupDescription: This Security Group is for RailsTemplatePublicSg
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        # Railsのアプリケーションサーバー用
+        - IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: RailsTemplatePublicSg
+
+  PrivateSg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: RailsTemplatePrivateSg  
+      GroupDescription: This Security Group is for RailsTemplatePrivateSg
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+         - IpProtocol: tcp
+           FromPort: 3306
+           ToPort: 3306
+           SourceSecurityGroupId: !Ref PublicSg
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: RailsTemplatePrivateSg
+  
+  SubnetGroup:
+   Type: AWS::RDS::DBSubnetGroup
+   Properties:
+     DBSubnetGroupDescription: This DBSubnet Group is for RailsTemplate
+     SubnetIds:
+       - !Ref private1a
+       - !Ref private1d
+     Tags:
+       - Key: Name
+         Value: RailsTemplateSubnetGroup
+
+  EC2Puclic1a:
+    Type: AWS::EC2::Instance
+    Properties:
+      KeyName: id_rsa_aws_from_m1_mac
+      DisableApiTermination: false
+      ImageId: ami-0a1c2ec61571737db
+      InstanceType: t3.small
+      SubnetId: !Ref public1a
+      Monitoring: false
+      AvailabilityZone: ap-northeast-1a
+      InstanceInitiatedShutdownBehavior: stop
+      SecurityGroupIds:
+        - !Ref PublicSg
+      UserData: !Base64 |
+        #!/bin/bash
+        sudo yum update -y
+        sudo yum install  -y gcc-c++ glibc-headers openssl-devel readline libyaml-devel readline-devel zlib zlib-devel 
+        sudo yum install -y git
+        git clone https://github.com/sstephenson/rbenv.git /usr/local/rbenv
+        chown -R ec2-user:ec2-user /usr/local/rbenv
+        echo 'export RBENV_ROOT="/usr/local/rbenv"' >> /etc/profile.d/rbenv.sh
+        echo 'export PATH="${RBENV_ROOT}/bin:${PATH}"' >> /etc/profile.d/rbenv.sh
+        echo 'eval "$(rbenv init -)"' >> /etc/profile.d/rbenv.sh
+        chown -R ec2-user:ec2-user /etc/profile.d/rbenv.sh
+        git clone https://github.com/sstephenson/ruby-build.git /usr/local/rbenv/plugins/ruby-build
+        chown -R ec2-user:ec2-user /usr/local/rbenv/plugins/ruby-build
+        bash -lc "rbenv install -s 3.0.0"
+        bash -lc "rbenv global 3.0.0 && rbenv rehash"
+        bash -lc "gem install rbenv-rehash"
+        bash -lc "gem install bundler -v 2.2.3"
+        bash -lc "gem install rails -v 6.1.1"
+        sudo yum localinstall -y https://dev.mysql.com/get/mysql80-community-release-el7-3.noarch.rpm
+        sudo yum install -y --enablerepo=mysql80-community mysql-community-server
+        sudo yum install -y --enablerepo=mysql80-community mysql-community-devel
+        curl -sL https://rpm.nodesource.com/setup_12.x | sudo bash -
+        sudo yum install nodejs
+        curl -sL https://dl.yarnpkg.com/rpm/yarn.repo | sudo tee /etc/yum.repos.d/yarn.repo
+        sudo yum install yarn
+        mkdir -p /var/www/
+        git clone https://github.com/yuta-ushijima/raisetech-live8-sample-app.git /var/www
+      Tags:
+        - Key: Name
+          Value: RailsTemplateEc2PublicSg
+
+  RDS:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      Engine: mysql
+      EngineVersion: 8.0.21
+      LicenseModel: general-public-license
+      DBInstanceClass: db.t2.micro
+      MultiAZ: false
+      # gp2がいわゆる汎用SSD
+      StorageType: gp2
+      DBInstanceIdentifier: rails-template-mysql
+      MasterUsername: admin
+      MasterUserPassword: adminpass
+      Port: 3306
+      VPCSecurityGroups:
+        - !Ref PrivateSg
+      AllocatedStorage: 20
+      AllowMajorVersionUpgrade: false
+      AutoMinorVersionUpgrade: true
+      PubliclyAccessible: false
+      DBParameterGroupName: default.mysql8.0
+      OptionGroupName: default:mysql-8-0
+      CopyTagsToSnapshot: false
+      BackupRetentionPeriod: 1
+      # モニタリングインターバルを0にする事で無効にする
+      MonitoringInterval: 0
+      DBName: raisetech_live8_sample_app_development
+      DBSubnetGroupName: !Ref SubnetGroup
+      Tags:
+        - Key: Name
+          Value: aws-cf-new-project-rds
