@@ -1,0 +1,28 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: VPC1を定義したスタック
+
+Parameters:
+  NameBase:
+    Description: Nameタグの基本名称
+    Type: String
+    Default: RaiseTekkun
+
+Resources:
+  Vpc1:
+    Type: AWS::EC2:VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      InstanceTenancy: default
+      Tags:
+        Name: !Sub vpc-${NameBase}
+
+Outputs:
+  Vpc1Id:
+    Description: Vpc1のVPCID
+    Value: !Ref Vpc1
+  Vpc1CidrBlock:
+    Description: Vpc1のCidrBlock
+    Value: !GetAtt Vpc1, CidrBlock

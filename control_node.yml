@@ -72,7 +72,6 @@ Resources:
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref Igw
 
-
   # セキュリティグループの定義
   SecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -130,30 +129,12 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${NameKeyPrefix}-Ec21a"
-  
-  Ec21a2:
-    Type: AWS::EC2::Instance
-    Properties:
-      SubnetId: !Ref PublicSubnet1a
-      InstanceType: t2.small
-      AvailabilityZone: ap-northeast-1a
-      KeyName: id_rsa_aws_from_m1_mac
-      Monitoring: false
-      # ここのAMIはマネジメントコンソールから確認可能
-      # 中身はAmazon Linux2
-      ImageId: ami-00f045aed21a55240
-      InstanceInitiatedShutdownBehavior: stop
-      SecurityGroupIds:
-        - !Ref SecurityGroup
-      Tags:
-        - Key: Name
-          Value: !Sub "${NameKeyPrefix}-Ec21a2"
 
   JenkinsIamUser:
     Type: AWS::IAM::User
     Properties:
       LoginProfile:
-        Password: Ch@ngEP@ssw0rd
+        Password: adminPass&202!0710
       Policies:
         - PolicyName: JenkinsRDSFullAccessPolicy
           PolicyDocument:
@@ -253,4 +234,4 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${NameKeyPrefix}-jenkins_from_cfn"
-      UserName: jenkins_from_cfn
+      UserName: jenkins_from_cfn_live15_20210710
