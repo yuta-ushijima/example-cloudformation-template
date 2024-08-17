@@ -186,7 +186,7 @@ Resources:
       Monitoring: false
       # ここのAMIはマネジメントコンソールから確認可能
       # 中身はAmazon Linux2
-      ImageId: ami-0a1c2ec61571737db
+      ImageId: ami-03a1b4db103179555
       InstanceInitiatedShutdownBehavior: stop
       SecurityGroupIds:
         - !Ref RaiseTechLive10SecurityGroup

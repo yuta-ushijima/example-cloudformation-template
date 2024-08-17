@@ -33,6 +33,18 @@ Resources:
         - Key: Name
           Value: !Sub "${NameKeyPrefix}-public-subnet-1a"
 
+  PublicSubnet1c:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: ap-northeast-1c
+      VpcId: !Ref VPC
+      # サブネット単位でiPv4パブリックアドレスの割り当てを有効化
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${NameKeyPrefix}-public-subnet-1c"
+
   # インターネットゲートウェイの定義
   Igw:
     Type: AWS::EC2::InternetGateway
@@ -64,6 +76,12 @@ Resources:
       SubnetId: !Ref PublicSubnet1a
       RouteTableId: !Ref RouteTable
 
+  SubnetRouteTable1c:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1c
+      RouteTableId: !Ref RouteTable
+
   # インターネットゲートウェイとルートテーブルの関連付け
   TableWithIgw:
     Type: AWS::EC2::Route
@@ -80,20 +98,33 @@ Resources:
       GroupDescription: This Security Group is for iPadDev
       SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: 0.0.0.0/0
-          Description: For HTTP
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 113.150.224.44/32
+          Description: connection from my home router
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
+          CidrIp: 106.154.153.38/32
+          Description: connection from my mobile router
+      SecurityGroupEgress:
+        - IpProtocol: -1
           CidrIp: 0.0.0.0/0
-          Description: For SSH
+      Tags:
+        - Key: Name
+          Value: !Sub "${NameKeyPrefix}-sg"
+
+  SecurityGroupEc21c:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VPC
+      GroupDescription: This Security Group is for Ansible Target Node
+      SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort: 8080
-          ToPort: 8080
-          CidrIp: 0.0.0.0/0
-          Description: For Jenkins
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Sub "${Ec21a.PublicIp}/32"
+          Description: For SSH
       SecurityGroupEgress:
         - IpProtocol: -1
           CidrIp: 0.0.0.0/0
@@ -121,117 +152,145 @@ Resources:
           #!/bin/bash
           sudo yum update -y
           sudo amazon-linux-extras install -y ansible2
-          sudo yum install -y java-1.8.0-openjdk-devel.x86_64
-          sudo wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat/jenkins.repo
-          sudo rpm --import https://pkg.jenkins.io/redhat/jenkins.io.key
-          sudo yum install -y jenkins git
-          sudo service jenkins start
+          # sudo yum install -y java-1.8.0-openjdk-devel.x86_64
+          # sudo wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat/jenkins.repo
+          # sudo rpm --import https://pkg.jenkins.io/redhat/jenkins.io.key
+          # sudo yum install -y jenkins git
+          # sudo service jenkins start
       Tags:
         - Key: Name
           Value: !Sub "${NameKeyPrefix}-Ec21a"
 
-  JenkinsIamUser:
-    Type: AWS::IAM::User
+  Ec21c:
+    Type: AWS::EC2::Instance
     Properties:
-      LoginProfile:
-        Password: adminPass&202!0710
-      Policies:
-        - PolicyName: JenkinsRDSFullAccessPolicy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-            - Effect: Allow
-              Action:
-                - "rds:*"
-                - "application-autoscaling:DeleteScalingPolicy"
-                - "application-autoscaling:DeregisterScalableTarget"
-                - "application-autoscaling:DescribeScalableTargets"
-                - "application-autoscaling:DescribeScalingActivities"
-                - "application-autoscaling:DescribeScalingPolicies"
-                - "application-autoscaling:PutScalingPolicy"
-                - "application-autoscaling:RegisterScalableTarget"
-                - "cloudwatch:DescribeAlarms"
-                - "cloudwatch:GetMetricStatistics"
-                - "cloudwatch:PutMetricAlarm"
-                - "cloudwatch:DeleteAlarms"
-                - "ec2:DescribeAccountAttributes"
-                - "ec2:DescribeAvailabilityZones"
-                - "ec2:DescribeCoipPools"
-                - "ec2:DescribeInternetGateways"
-                - "ec2:DescribeLocalGatewayRouteTables"
-                - "ec2:DescribeLocalGatewayRouteTableVpcAssociations"
-                - "ec2:DescribeLocalGateways"
-                - "ec2:DescribeSecurityGroups"
-                - "ec2:DescribeSubnets"
-                - "ec2:DescribeVpcAttribute"
-                - "ec2:DescribeVpcs"
-                - "ec2:GetCoipPoolUsage"
-                - "sns:ListSubscriptions"
-                - "sns:ListTopics"
-                - "sns:Publish"
-                - "logs:DescribeLogStreams"
-                - "logs:GetLogEvents"
-                - "outposts:GetOutpostInstanceTypes"
-              Resource:
-                - "*"
-            - Effect: Allow
-              Action: "pi:*"
-              Resource:
-                - "arn:aws:pi:*:*:metrics/rds/*"
-            - Effect: Allow
-              Action:
-                - iam:CreateServiceLinkedRole"
-              Resource:
-                - "*"
-              Condition:
-                StringLike:
-                  iam:AWSServiceName:
-                    - "rds.amazonaws.com"
-                    - "rds.application-autoscaling.amazonaws.com"
-
-        - PolicyName: JenkinsEC2AndVPCFullAccessPolicy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action: "ec2:*"
-                Resource:
-                  - "*"
-              - Effect: Allow
-                Action: "elasticloadbalancing:*"
-                Resource:
-                  - "*"
-              - Effect: Allow
-                Action: "cloudwatch:*"
-                Resource:
-                  - "*"
-              - Effect: Allow
-                Action: "autoscaling:*"
-                Resource:
-                  - "*"
-              - Effect: Allow
-                Action: "iam:CreateServiceLinkedRole"
-                Resource:
-                  - "*"
-                Condition:
-                  StringEquals:
-                    iam:AWSServiceName:
-                      - "autoscaling.amazonaws.com"
-                      - "ec2scheduled.amazonaws.com"
-                      - "elasticloadbalancing.amazonaws.com"
-                      - "spot.amazonaws.com"
-                      - "spotfleet.amazonaws.com"
-                      - "transitgateway.amazonaws.com"
-
-        - PolicyName: JenkinsCloudFormationFullAccess
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action: "cloudformation:*"
-                Resource:
-                  - "*"
+      SubnetId: !Ref PublicSubnet1c
+      InstanceType: t2.medium
+      AvailabilityZone: ap-northeast-1c
+      KeyName: id_rsa_aws_from_m1_mac
+      Monitoring: false
+      # ここのAMIはマネジメントコンソールから確認可能
+      # 中身はAmazon Linux2
+      ImageId: ami-00f045aed21a55240
+      InstanceInitiatedShutdownBehavior: stop
+      SecurityGroupIds:
+        - !Ref SecurityGroupEc21c
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          sudo yum update -y
+          # sudo amazon-linux-extras install -y ansible2
+          # sudo yum install -y java-1.8.0-openjdk-devel.x86_64
+          # sudo wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat/jenkins.repo
+          # sudo rpm --import https://pkg.jenkins.io/redhat/jenkins.io.key
+          # sudo yum install -y jenkins git
+          # sudo service jenkins start
       Tags:
         - Key: Name
-          Value: !Sub "${NameKeyPrefix}-jenkins_from_cfn"
-      UserName: jenkins_from_cfn_live15_20210710
+          Value: !Sub "${NameKeyPrefix}-Ec21c"
+
+  # JenkinsIamUser:
+    # Type: AWS::IAM::User
+    # Properties:
+    #   LoginProfile:
+    #     Password: adminPass&202!0710
+    #   Policies:
+    #     - PolicyName: JenkinsRDSFullAccessPolicy
+    #       PolicyDocument:
+    #         Version: "2012-10-17"
+    #         Statement:
+    #         - Effect: Allow
+    #           Action:
+    #             - "rds:*"
+    #             - "application-autoscaling:DeleteScalingPolicy"
+    #             - "application-autoscaling:DeregisterScalableTarget"
+    #             - "application-autoscaling:DescribeScalableTargets"
+    #             - "application-autoscaling:DescribeScalingActivities"
+    #             - "application-autoscaling:DescribeScalingPolicies"
+    #             - "application-autoscaling:PutScalingPolicy"
+    #             - "application-autoscaling:RegisterScalableTarget"
+    #             - "cloudwatch:DescribeAlarms"
+    #             - "cloudwatch:GetMetricStatistics"
+    #             - "cloudwatch:PutMetricAlarm"
+    #             - "cloudwatch:DeleteAlarms"
+    #             - "ec2:DescribeAccountAttributes"
+    #             - "ec2:DescribeAvailabilityZones"
+    #             - "ec2:DescribeCoipPools"
+    #             - "ec2:DescribeInternetGateways"
+    #             - "ec2:DescribeLocalGatewayRouteTables"
+    #             - "ec2:DescribeLocalGatewayRouteTableVpcAssociations"
+    #             - "ec2:DescribeLocalGateways"
+    #             - "ec2:DescribeSecurityGroups"
+    #             - "ec2:DescribeSubnets"
+    #             - "ec2:DescribeVpcAttribute"
+    #             - "ec2:DescribeVpcs"
+    #             - "ec2:GetCoipPoolUsage"
+    #             - "sns:ListSubscriptions"
+    #             - "sns:ListTopics"
+    #             - "sns:Publish"
+    #             - "logs:DescribeLogStreams"
+    #             - "logs:GetLogEvents"
+    #             - "outposts:GetOutpostInstanceTypes"
+    #           Resource:
+    #             - "*"
+    #         - Effect: Allow
+    #           Action: "pi:*"
+    #           Resource:
+    #             - "arn:aws:pi:*:*:metrics/rds/*"
+    #         - Effect: Allow
+    #           Action:
+    #             - iam:CreateServiceLinkedRole"
+    #           Resource:
+    #             - "*"
+    #           Condition:
+    #             StringLike:
+    #               iam:AWSServiceName:
+    #                 - "rds.amazonaws.com"
+    #                 - "rds.application-autoscaling.amazonaws.com"
+
+    #     - PolicyName: JenkinsEC2AndVPCFullAccessPolicy
+    #       PolicyDocument:
+    #         Version: "2012-10-17"
+    #         Statement:
+    #           - Effect: Allow
+    #             Action: "ec2:*"
+    #             Resource:
+    #               - "*"
+    #           - Effect: Allow
+    #             Action: "elasticloadbalancing:*"
+    #             Resource:
+    #               - "*"
+    #           - Effect: Allow
+    #             Action: "cloudwatch:*"
+    #             Resource:
+    #               - "*"
+    #           - Effect: Allow
+    #             Action: "autoscaling:*"
+    #             Resource:
+    #               - "*"
+    #           - Effect: Allow
+    #             Action: "iam:CreateServiceLinkedRole"
+    #             Resource:
+    #               - "*"
+    #             Condition:
+    #               StringEquals:
+    #                 iam:AWSServiceName:
+    #                   - "autoscaling.amazonaws.com"
+    #                   - "ec2scheduled.amazonaws.com"
+    #                   - "elasticloadbalancing.amazonaws.com"
+    #                   - "spot.amazonaws.com"
+    #                   - "spotfleet.amazonaws.com"
+    #                   - "transitgateway.amazonaws.com"
+
+    #     - PolicyName: JenkinsCloudFormationFullAccess
+    #       PolicyDocument:
+    #         Version: "2012-10-17"
+    #         Statement:
+    #           - Effect: Allow
+    #             Action: "cloudformation:*"
+    #             Resource:
+    #               - "*"
+    #   Tags:
+    #     - Key: Name
+    #       Value: !Sub "${NameKeyPrefix}-jenkins_from_cfn"
+    #   UserName: jenkins_from_cfn_live15_20210710

@@ -131,3 +131,22 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub "${NameKeyPrefix}-Ec21a"
+      
+    Ec21a:
+    Type: AWS::EC2::Instance
+    Properties:
+      SubnetId: !Ref PublicSubnet1a
+      InstanceType: t2.small
+      AvailabilityZone: ap-northeast-1a
+      KeyName: ipad-dev-key
+      Monitoring: false
+      # ここのAMIはマネジメントコンソールから確認可能
+      # 中身はAmazon Linux2
+      ImageId: ami-00f045aed21a55240
+      InstanceInitiatedShutdownBehavior: stop
+      SecurityGroupIds:
+        - !Ref SecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub "${NameKeyPrefix}-Ec21a"
+

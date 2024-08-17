@@ -1,0 +1,179 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: "ALBがヘルスチェック異常を検出したときのアラーム、メール通知のデモ用環境を構築"
+
+Resources:
+  albAlertVpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: albAlertVpc
+  albAlertPubSub1a:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: ap-northeast-1a
+      VpcId: !Ref albAlertVpc
+      CidrBlock: 10.0.1.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: albAlertPubSub1a
+  albAlertPubSub1c:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: ap-northeast-1c
+      VpcId: !Ref albAlertVpc
+      CidrBlock: 10.0.2.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: albAlertPubSub1c
+  albAlertIgw:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: albAlertIgw
+  albAlertAttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref albAlertVpc
+      InternetGatewayId: !Ref albAlertIgw
+  albAlertRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref albAlertVpc
+      Tags:
+        - Key: Name
+          Value: albAlertRouteTable
+  albAlertRouteRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref albAlertRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref albAlertIgw
+  albAlertRouteTableAssocPub1a:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref albAlertPubSub1a
+      RouteTableId: !Ref albAlertRouteTable
+  albAlertRouteTableAssocPub1c:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref albAlertPubSub1c
+      RouteTableId: !Ref albAlertRouteTable
+  albAlertSecGroupEc2:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: securityGroupForEc2
+      GroupDescription: securityGroupForEc2
+      VpcId: !Ref albAlertVpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: albAlertRouteTableSecGroupEc2
+  albAlertEc21a:
+    Type: AWS::EC2::Instance
+    Properties:
+      KeyName: id_rsa_aws_from_m1_mac
+      DisableApiTermination: false
+      ImageId: ami-02c3627b04781eada
+      InstanceType: t2.small
+      AvailabilityZone: ap-northeast-1a
+      SubnetId: !Ref albAlertPubSub1a
+      InstanceInitiatedShutdownBehavior: stop
+      Monitoring: false
+      SecurityGroupIds:
+        - !Ref albAlertSecGroupEc2
+      UserData: !Base64 |
+        !/bin/bash -ex
+        sudo yum update -y
+        sudo amazon-linux-extras install -y nginx1
+        sudo systemctl start nginx
+        sudo systemctl enable nginx
+      Tags:
+        - Key: Name
+          Value: albAlertEc21a
+  albAlertSecGroupAlb:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: securityGroupForAlb
+      GroupDescription: securityGroupForAlb
+      VpcId: !Ref albAlertVpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: albAlertRouteTableSecGroupAlb
+  albAlertElb:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties: 
+      IpAddressType: ipv4
+      Name: albAlertElb
+      Scheme: internet-facing
+      SecurityGroups: 
+        - !Ref albAlertSecGroupAlb
+      # SubnetMappings: 
+      #   - SubnetMapping
+      Subnets: 
+        - !Ref albAlertPubSub1a
+        - !Ref albAlertPubSub1c
+      Tags: 
+        - Key: Name
+          Value: albAlertElb
+      Type: application
+  albAlertElbTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties: 
+      HealthCheckEnabled: true
+      HealthCheckIntervalSeconds: 5
+      HealthCheckPath: /
+      HealthCheckPort: 80
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 2
+      HealthyThresholdCount: 2
+      IpAddressType: ipv4
+      Matcher: 
+        HttpCode: 200
+      Name: albAlertElbTargetGroup
+      Port: 80
+      Protocol: HTTP
+      ProtocolVersion: HTTP1
+      Tags: 
+        - Key: Name
+          Value: albAlertElbTargetGroup
+      Targets: 
+        - Id: !Ref albAlertEc21a
+          Port: 80
+      UnhealthyThresholdCount: 5
+      VpcId: !Ref albAlertVpc
+  albAlertElbListner:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties: 
+      DefaultActions: 
+        - TargetGroupArn: !Ref albAlertElbTargetGroup
+          Type: forward
+      LoadBalancerArn: !Ref albAlertElb
+      Port: 80
+      Protocol: HTTP
